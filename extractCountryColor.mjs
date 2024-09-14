@@ -1,7 +1,7 @@
 import fetch from 'node-fetch';
 import * as cheerio from 'cheerio';
 
-// Function to fetch and scrape the page
+// Function to fetch and scrape countries
 async function fetchAndScrape(url) {
     try {
         const response = await fetch(url);
