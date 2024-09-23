@@ -1,6 +1,8 @@
 // Simple blackjack games as an API
 import express from 'express'
 import crypto from 'crypto'
+import * as typeorm from 'typeorm'
+import {DataSource, EntitySchema} from "typeorm";
 const blackjackAPI = express();
 blackjackAPI.use(express.json());
 
@@ -94,6 +96,24 @@ class errorMsg {
 const suits = ['\u2660','\u2663','\u2665','\u2666'];
 const faces = ['2','3','4','5','6','7','8','9','10','A','J','Q','K'];
 const currentGames = [];
+const gameSchema = new EntitySchema({
+    name: "Games",
+    tableName: "games",
+    columns: {
+        token: { primary: true, type: "text", unique: true, nullable: false },
+        ip: { type: "text" },
+        status: { type: "text" },
+        deck: { type: "simple-array" },
+        playerCards: { type: "simple-array" },
+        dealerCards: { type: "simple-array" }
+    }
+})
+const dataSource = new DataSource({
+    type: "better-sqlite3",
+    synchronize: true,
+    database: "main.sqlite",
+    entities: [gameSchema]
+});
 
 // Utils
 function checkToken(req, res) {
