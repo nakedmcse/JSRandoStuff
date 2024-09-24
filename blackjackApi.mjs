@@ -7,10 +7,11 @@ blackjackAPI.use(express.json());
 
 // Classes
 class game {
-    constructor(token, ip, status, deck = [], dealerCards = [], playerCards = []) {
+    constructor(token, ip, status, startedOn, deck = [], dealerCards = [], playerCards = []) {
         this.token = token;
         this.ip = ip;
         this.status = status;
+        this.startedOn = startedOn;
         this.deck = deck;
         this.dealerCards = dealerCards;
         this.playerCards = playerCards;
@@ -94,14 +95,14 @@ class errorMsg {
 // Globals
 const suits = ['\u2660','\u2663','\u2665','\u2666'];
 const faces = ['2','3','4','5','6','7','8','9','10','A','J','Q','K'];
-const currentGames = [];
 const gameSchema = new EntitySchema({
-    name: "Games",
+    name: "game",
     tableName: "games",
     columns: {
         token: { primary: true, type: "text", unique: true, nullable: false },
         ip: { type: "text" },
         status: { type: "text" },
+        startedOn: { type: "integer"},
         deck: { type: "simple-array" },
         playerCards: { type: "simple-array" },
         dealerCards: { type: "simple-array" }
@@ -115,31 +116,38 @@ const dataSource = new DataSource({
 });
 
 // Utils
-function checkToken(req, res) {
+async function checkToken(req, res) {
     if(!req.query.token) {
         res.status = 400;
         res.send(JSON.stringify(new errorMsg(400, "Missing Token")));
         return null;
     }
-    const retGame = currentGames.find(x => x.token === req.query.token);
+    const gameRepo = dataSource.getRepository("game");
+    const retGame = await gameRepo.findOneBy({ token: req.query.token });
     if(!retGame) {
         res.status = 400;
         res.send(JSON.stringify(new errorMsg(400, "Missing Game")));
         return null;
     }
-    return retGame;
+
+    return Object.setPrototypeOf(retGame, game.prototype);
 }
 
 // Endpoints
-blackjackAPI.get('/deal', (req, res) => {
+blackjackAPI.get('/deal', async (req, res) => {
     const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
-    let retGame = currentGames.find(x => x.ip === ip);
+
+    const gameRepo = dataSource.getRepository("game");
+    let retGame = await gameRepo.findOneBy({ ip: ip });
+
     if (!retGame) {
-        retGame = new game(crypto.randomUUID(), ip, "playing")
+        retGame = new game(crypto.randomUUID(), ip, "playing", Date.now());
         retGame.createDeck();
         retGame.deal();
-        currentGames.push(retGame);
+        await gameRepo.save(retGame);
         console.log(`Created new game for ${ip}:${retGame.token}`);
+    } else {
+        Object.setPrototypeOf(retGame, game.prototype);
     }
     console.log(`DEAL: ${retGame.token}`);
     const resp = new responseMsg(retGame.token, retGame.playerCards, [],
@@ -147,8 +155,8 @@ blackjackAPI.get('/deal', (req, res) => {
     res.send(JSON.stringify(resp));
 });
 
-blackjackAPI.get('/hit', (req, res) => {
-    const retGame = checkToken(req, res);
+blackjackAPI.get('/hit', async (req, res) => {
+    const retGame = await checkToken(req, res);
     if(!retGame) {
         return;
     }
@@ -158,16 +166,20 @@ blackjackAPI.get('/hit', (req, res) => {
         retGame.status = "Bust";
         console.log("BUST");
     }
+
+    const gameRepo = dataSource.getRepository("game");
+    await gameRepo.save(retGame);
+
     const resp = new responseMsg(retGame.token, retGame.playerCards, [],
         retGame.value(retGame.playerCards), 0, retGame.status);
     if(retGame.status === "Bust") {
-        currentGames.splice(currentGames.findIndex(x => x.token === retGame.token),1);
+        await gameRepo.remove(retGame);
     }
     res.send(JSON.stringify(resp));
 });
 
-blackjackAPI.get('/stay', (req, res) => {
-    const retGame = checkToken(req, res);
+blackjackAPI.get('/stay', async (req, res) => {
+    const retGame = await checkToken(req, res);
     if(!retGame) {
         return;
     }
@@ -191,9 +203,12 @@ blackjackAPI.get('/stay', (req, res) => {
         retGame.status = "Draw";
         console.log("DRAW");
     }
+
+    const gameRepo = dataSource.getRepository("game");
+    await gameRepo.remove(retGame);
+
     const resp = new responseMsg(retGame.token, retGame.playerCards, retGame.dealerCards,
         retGame.value(retGame.playerCards), dealerVal, retGame.status);
-    currentGames.splice(currentGames.findIndex(x => x.token === retGame.token),1);
     res.send(JSON.stringify(resp));
 });
 
@@ -201,7 +216,7 @@ blackjackAPI.get('/stay', (req, res) => {
 blackjackAPI.listen(3000, () => {
     dataSource.initialize()
         .then(() => {
-            console.log("Data Source has been initialized!");
+            console.log("Data Source has been initialized");
         })
         .catch((err) => {
             console.error("Error during Data Source initialization", err);
