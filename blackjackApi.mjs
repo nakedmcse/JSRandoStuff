@@ -1,7 +1,6 @@
 // Simple blackjack games as an API
 import express from 'express'
 import crypto from 'crypto'
-import * as typeorm from 'typeorm'
 import {DataSource, EntitySchema} from "typeorm";
 const blackjackAPI = express();
 blackjackAPI.use(express.json());
@@ -200,5 +199,12 @@ blackjackAPI.get('/stay', (req, res) => {
 
 // Start
 blackjackAPI.listen(3000, () => {
+    dataSource.initialize()
+        .then(() => {
+            console.log("Data Source has been initialized!");
+        })
+        .catch((err) => {
+            console.error("Error during Data Source initialization", err);
+        });
     console.log('BlackJack listening on port 3000');
 });
