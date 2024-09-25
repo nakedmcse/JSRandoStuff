@@ -17,9 +17,12 @@ class game {
         this.playerCards = playerCards;
     }
 
+    static suits = ['\u2660','\u2663','\u2665','\u2666'];
+    static faces = ['2','3','4','5','6','7','8','9','10','A','J','Q','K'];
+
     createDeck() {
-        for(const suit of suits) {
-            for(const face of faces) {
+        for(const suit of game.suits) {
+            for(const face of game.faces) {
                 this.deck.push(face + suit);
             }
         }
@@ -102,8 +105,6 @@ class errorMsg {
 }
 
 // Globals
-const suits = ['\u2660','\u2663','\u2665','\u2666'];
-const faces = ['2','3','4','5','6','7','8','9','10','A','J','Q','K'];
 const gameSchema = new EntitySchema({
     name: "game",
     tableName: "games",
