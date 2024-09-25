@@ -74,6 +74,15 @@ class game {
     }
 }
 
+class stat {
+    constructor(device, wins, loses, draws) {
+        this.device = device;
+        this.wins = wins;
+        this.loses = loses;
+        this.draws = draws;
+    }
+}
+
 class responseMsg {
     constructor(token, cards, dealerCards, handValue, dealerValue, status) {
         this.token = token;
@@ -108,11 +117,21 @@ const gameSchema = new EntitySchema({
         dealerCards: { type: "simple-array" }
     }
 })
+const statSchema = new EntitySchema({
+    name: "stat",
+    tableName: "stats",
+    columns: {
+        device: { primary: true, type: "text", unique: true, nullable: false },
+        wins: { type: "integer" },
+        loses: { type: "integer" },
+        draws: { type: "integer" }
+    }
+})
 const dataSource = new DataSource({
     type: "better-sqlite3",
     synchronize: true,
     database: "main.sqlite",
-    entities: [gameSchema]
+    entities: [gameSchema, statSchema]
 });
 
 // Utils
@@ -131,6 +150,33 @@ async function checkToken(req, res) {
     }
 
     return Object.setPrototypeOf(retGame, game.prototype);
+}
+
+function deviceHash(req) {
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+    const ua = req.headers['user-agent'];
+    return crypto.createHash('sha256').update(ip+ua).digest('hex');
+}
+
+async function updateStats(req, action) {
+    const deviceId = deviceHash(req);
+    const statRepo = dataSource.getRepository("stat");
+    let userStats = await statRepo.findOneBy({device: deviceId});
+    if (!userStats) {
+        userStats = new stat(deviceId,0,0,0);
+    }
+    switch(action) {
+        case "win":
+            userStats.wins++;
+            break;
+        case "loss":
+            userStats.loses++;
+            break;
+        case "draw":
+            userStats.draws++;
+            break;
+    }
+    await statRepo.save(userStats);
 }
 
 // Endpoints
@@ -168,12 +214,13 @@ blackjackAPI.get('/hit', async (req, res) => {
     }
 
     const gameRepo = dataSource.getRepository("game");
-    await gameRepo.save(retGame);
-
     const resp = new responseMsg(retGame.token, retGame.playerCards, [],
         retGame.value(retGame.playerCards), 0, retGame.status);
     if(retGame.status === "Bust") {
         await gameRepo.remove(retGame);
+        await updateStats(req, "loss");
+    } else {
+        await gameRepo.save(retGame);
     }
     res.send(JSON.stringify(resp));
 });
@@ -190,18 +237,22 @@ blackjackAPI.get('/stay', async (req, res) => {
     if(dealerVal > 21) {
         retGame.status = "Dealer Bust";
         console.log("DEALER BUST");
+        await updateStats(req, "win");
     }
     else if(playerVal > dealerVal) {
         retGame.status = "Player Wins";
         console.log("PLAYER WIN");
+        await updateStats(req, "win");
     }
     else if(dealerVal > playerVal) {
         retGame.status = "Dealer Wins";
         console.log("DEALER WIN");
+        await updateStats(req, "loss");
     }
     else {
         retGame.status = "Draw";
         console.log("DRAW");
+        await updateStats(req, "draw");
     }
 
     const gameRepo = dataSource.getRepository("game");
@@ -210,6 +261,21 @@ blackjackAPI.get('/stay', async (req, res) => {
     const resp = new responseMsg(retGame.token, retGame.playerCards, retGame.dealerCards,
         retGame.value(retGame.playerCards), dealerVal, retGame.status);
     res.send(JSON.stringify(resp));
+});
+
+blackjackAPI.get('/stats', async (req, res) => {
+    const deviceId = deviceHash(req);
+    const statRepo = dataSource.getRepository("stat");
+    let userStats = await statRepo.findOneBy({device: deviceId});
+    console.log('STATS');
+    if (!userStats) {
+        console.log('MISSING DEVICE');
+        res.status = 400;
+        res.send(JSON.stringify(new errorMsg(400, "Missing Device")));
+        return;
+    }
+    delete userStats.device;
+    res.send(JSON.stringify(userStats));
 });
 
 // Start
