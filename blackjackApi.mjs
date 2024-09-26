@@ -7,9 +7,9 @@ blackjackAPI.use(express.json());
 
 // Classes
 class game {
-    constructor(token, ip, status, startedOn, deck = [], dealerCards = [], playerCards = []) {
+    constructor(token, device, status, startedOn, deck = [], dealerCards = [], playerCards = []) {
         this.token = token;
-        this.ip = ip;
+        this.device = device;
         this.status = status;
         this.startedOn = startedOn;
         this.deck = deck;
@@ -110,7 +110,7 @@ const gameSchema = new EntitySchema({
     tableName: "games",
     columns: {
         token: { primary: true, type: "text", unique: true, nullable: false },
-        ip: { type: "text" },
+        device: { type: "text" },
         status: { type: "text" },
         startedOn: { type: "integer"},
         deck: { type: "simple-array" },
@@ -182,17 +182,16 @@ async function updateStats(req, action) {
 
 // Endpoints
 blackjackAPI.get('/deal', async (req, res) => {
-    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
-
+    const deviceId = deviceHash(req);
     const gameRepo = dataSource.getRepository("game");
-    let retGame = await gameRepo.findOneBy({ ip: ip });
+    let retGame = await gameRepo.findOneBy({ device: deviceId });
 
     if (!retGame) {
-        retGame = new game(crypto.randomUUID(), ip, "playing", Date.now());
+        retGame = new game(crypto.randomUUID(), deviceId, "playing", Date.now());
         retGame.createDeck();
         retGame.deal();
         await gameRepo.save(retGame);
-        console.log(`Created new game for ${ip}:${retGame.token}`);
+        console.log(`Created new game for ${deviceId}:${retGame.token}`);
     } else {
         Object.setPrototypeOf(retGame, game.prototype);
     }
