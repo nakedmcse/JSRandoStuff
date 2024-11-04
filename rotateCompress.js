@@ -1,11 +1,11 @@
 // Circular sentence - true is the last character of each word is the same as the first character of the next
 // and the last character of the last word is the same as the first character of the first word
 function isCircular(s) {
-    const splitS = s.split(' ');
-    if(splitS[0][0] !== splitS[splitS.length-1][splitS[splitS.length-1].length-1]) return false;  // first and last char do not match
-    if(splitS.length === 1) return true; // first and last char match on a single word
-    for(let i = 1; i < splitS.length; i++) {
-        if(splitS[i][0] !== splitS[i-1][splitS[i-1].length-1]) return false;
+    const words = s.split(' ');
+    if(words[0][0] !== words[words.length-1][words[words.length-1].length-1]) return false;  // first and last char do not match
+    if(words.length === 1) return true; // first and last char match on a single word
+    for(let i = 1; i < words.length; i++) {
+        if(words[i][0] !== words[i-1][words[i-1].length-1]) return false;
     }
     return true;
 }
