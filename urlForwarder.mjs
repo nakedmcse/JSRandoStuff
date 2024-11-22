@@ -24,9 +24,8 @@ const forwards = [];
 // Add a forward
 urlForwardAPI.post('/add', async (req, res) => {
     if(!req.query.target || !req.query.slug || !req.query.expires) {
-        res.status(400);
-        res.send(JSON.stringify(new errorMsg(400, "Missing Slug, Target or Expires")));
-        return null;
+        res.status(400).send(JSON.stringify(new errorMsg(400, "Missing Slug, Target or Expires")));
+        return;
     }
     const exists = forwards.findIndex(x => x.slug === req.query.slug);
     if(exists !== -1) forwards.splice(exists,1);
