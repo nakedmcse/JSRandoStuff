@@ -11,7 +11,9 @@ function maxAveragePass(classes, extra) {
         let maxAvg = 0;
         let maxIdx = -1;
         for(let j = 0; j<classes.length; j++) {
-            const clprime = JSON.parse(JSON.stringify(classes));
+            //const clprime = JSON.parse(JSON.stringify(classes));
+            const clprime = [];
+            classes.forEach(x => clprime.push([...x]));
             clprime[j][0]++;
             clprime[j][1]++;
             if(calcAvg(clprime) > maxAvg) {
