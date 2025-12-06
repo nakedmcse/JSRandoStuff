@@ -32,6 +32,7 @@ const url = 'https://raw.githubusercontent.com/dwyl/english-words/refs/heads/mas
 fetch(url)
     .then(res => res.json())
     .then(data => {
+        console.time("Decrypt");
         const uniqueLetters = new Set(cypherText);
         iterateMappings(Array.from(uniqueLetters), (map) => {
             let cleartext = "";
@@ -46,4 +47,5 @@ fetch(url)
             }
             return false;
         });
+        console.timeEnd("Decrypt");
     })
