@@ -6,60 +6,36 @@ const key3 = 0x23;
 
 function columnCypher(text, key) {
     const columns = key.length;
-    const rows = Math.ceil(text.length / columns);
-    const collens = new Array(columns).fill(rows);
-    const indices = [...key].map((ch, idx) => ({ ch, idx }));
-    indices.sort((a, b) => (a.ch < b.ch ? -1 : a.ch > b.ch ? 1 : 0));
-
     const colData = new Array(columns);
-    let pos = 0;
-    for (const { idx } of indices) {
-        const len = collens[idx];
-        colData[idx] = text.slice(pos, pos + len).split("");
-        pos += len;
-    }
+    const rows = Math.ceil(text.length / columns);
+    const indexes = [...key].map((c, i) => ({c, i}))
+        .sort((a, b) => a.c.charCodeAt(0) - b.c.charCodeAt(0));
 
-    const result= [];
-    for (let r = 0; r < rows; r++) {
-        for (let c = 0; c < columns; c++) {
-            if (r < colData[c].length) {
-                result.push(colData[c][r]);
-            }
-        }
-    }
+    indexes.forEach((o, idx) => {
+        colData[o.i] = text.slice(idx*rows, (idx*rows)+rows).split("");
+    });
 
-    return result.join("").replaceAll('x','');
-}
-
-function caeserCypher(text, offset) {
-    const alpha = "abcdefghijklmnopqrstuvwxyz";
-    let output = "";
-    for (let i = 0; i < text.length; i++) {
-        let target = (alpha.indexOf(text[i])+offset) % alpha.length;
-        if (target < 0) target = 26 + target;
-        output += alpha[target];
-    }
-    return output;
+    let result = "";
+    for (let r = 0; r < rows; r++) result += colData.map(c => c[r]).join('');
+    return result.replaceAll('x','');
 }
 
 function viginereCypher(text, key) {
-    let result = "";
     const alpha = "abcdefghijklmnopqrstuvwxyz";
-    for (let i = 0; i < text.length; i++) {
-        const offset = alpha.indexOf(key[i % key.length]);
-        result += caeserCypher(text[i], 0-offset);
-    }
-    return result;
+    const caeserCypher = (c,o) => alpha[(alpha.indexOf(c)+o+alpha.length) % alpha.length];
+
+    return [...text].map((c, i) => {
+        return caeserCypher(c, 0 - alpha.indexOf(key[i % key.length]))
+    }).join('');
 }
 
 function xorCypher(text, key) {
     const cypherBytes =
         new Uint8Array([...text.matchAll(/../g)].map(m => parseInt(m[0], 16)));
-    let result = "";
-    for (let i = 0; i < cypherBytes.length; i++) {
-        result +=  String.fromCharCode(cypherBytes[i] ^ key[i % key.length].charCodeAt(0));
-    }
-    return result;
+
+    return Array.from(cypherBytes).map((b, i) => {
+        return String.fromCharCode(b ^ key[i % key.length].charCodeAt(0));
+    }).join('');
 }
 
 let cleartext = xorCypher(cypherText, String.fromCharCode(key3));
