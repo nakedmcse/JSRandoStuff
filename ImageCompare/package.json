@@ -1,0 +1,15 @@
+{
+  "name": "imagecompare",
+  "version": "1.0.0",
+  "description": "Image comparer",
+  "license": "ISC",
+  "author": "Walker",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "devDependencies": {
+    "jimp": "^1.6.0"
+  }
+}
