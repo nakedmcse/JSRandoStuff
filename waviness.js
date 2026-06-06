@@ -7,11 +7,22 @@
 
 function waviness(start, end) {
     function toDigits(num) {
-        const digits = [];
+        const digits = new Array(65);
+        let i = 64;
         while (num > 0) {
-            digits.unshift(num % 10);
+            digits[i--] = num % 10;
             num = Math.floor(num / 10);
         }
+        return digits.slice(i, digits.length);
+    }
+
+    function incrementDigits(digits) {
+        for (let i = digits.length - 1; i >= 0; i--) {
+            digits[i]++;
+            if (digits[i] < 10) return digits;
+            digits[i] = 0;
+        }
+        digits.unshift(1);
         return digits;
     }
 
@@ -32,9 +43,10 @@ function waviness(start, end) {
     }
 
     let retval = 0;
+    let digits = toDigits(start);
     for (let i = start; i <= end; i++) {
-        const digits = toDigits(i);
         for (let j = 0; j < digits.length; j++) retval += isWavy(digits,j);
+        digits = incrementDigits(digits);
     }
     return retval;
 }
@@ -43,3 +55,6 @@ console.log(waviness(120,130));
 console.log(waviness(198,202));
 console.log(waviness(4848,4848));
 console.log(waviness(Number.MAX_SAFE_INTEGER,Number.MAX_SAFE_INTEGER));
+console.time('waviness');
+console.log(waviness(0,1000000000));
+console.timeEnd('waviness');
